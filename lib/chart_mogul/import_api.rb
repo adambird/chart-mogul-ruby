@@ -163,6 +163,60 @@ module ChartMogul
       Import::Plan.new(preprocess_response(response))
     end
 
+    # Public - cancel a customers Subscription
+    #
+    # subscription_uuid - The ChartMogul UUID of the subscription that needs to
+    #                     be cancelled
+    # args              - :cancelled_at the time at which the Subscription was
+    #                     cancelled must be in the past
+    #
+    # Returns a ChartMogul::Import::Subscription
+    def cancel_subscription(subscription_uuid, args)
+      [:cancelled_at].each do |attribute|
+        refute_blank! args[attribute], attribute
+      end
+
+      response = connection.post do |request|
+        request.url "/v1/import/subscriptions/#{subscription_uuid}"
+        request.headers['Content-Type'] = "application/json"
+        request.body = args.to_json
+      end
+
+      Import::Subscription.new(preprocess_response(response))
+    end
+
+    # Public - list all subscriptions.
+    #          this will page through all subscriptions see #list_subscriptions_each
+    #          for iterator method to prevent loading the whole array in
+    #          memory
+    #
+    # customer_uuid - The ChartMogul UUID of the Customer whos subscriptions are
+    #                 Requested
+    # params - optional parameters for paging :page and :per_page
+    #
+    # Returns an Array of ChartMogul::Import::Subscription
+    def list_subscriptions(customer_uuid, params = {})
+      subscriptions = []
+      list_subscriptions_each(customer_uuid, params) { |p| subscriptions << p }
+      subscriptions
+    end
+
+    # Public    - iterate through all subscriptions
+    #
+    # customer_uuid - The ChartMogul UUID of the Customer whos subscriptions are
+    #                 Requested
+    # params - optional parameters for paging :page and :per_page
+    #
+    # Returns an Enumerable that will yield a ChartMogul::Import::Plan for
+    # each record
+    def list_subscriptions_each(customer_uuid, params={}, &block)
+      paged_get("/v1/import/customers/#{customer_uuid}/subscriptions", params, :subscriptions) do |subscriptions|
+        subscriptions.each do |subscription|
+          yield Import::Subscription.new(subscription)
+        end
+      end
+    end
+
     # Public      - import a single Invoice. Convenience method that
     #               maps the output (and validation errors) to a single operation
     #
