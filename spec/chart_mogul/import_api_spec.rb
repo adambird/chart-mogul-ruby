@@ -196,6 +196,33 @@ module ChartMogul
 
     end
 
+    describe "list_subscriptions" do
+
+      let(:subscriptions) {[
+                     {
+                             uuid: "sub_e6bc5407-e258-4de0-bb43-61faaf062035",
+                             external_id: "sub_0001",
+                             plan_uuid: "pl_eed05d54-75b4-431b-adb2-eb6b9e543206",
+                             data_source_uuid: "ds_fef05d54-47b4-431b-aed2-eb6b9e545430",
+                             cancellation_dates: []
+                     },
+                    ]}
+      let(:customer_uuid) { random_string }
+      before(:each) do
+        stub_request(:get, request_stub_path(credentials, "/import/customers/#{customer_uuid}/subscriptions") + "?page_number=1")
+          .to_return(status: 200, body: { subscriptions: subscriptions, current_page: 1, total_pages: 1, customer_uuid: customer_uuid }.to_json)
+      end
+
+      subject { client.list_subscriptions(customer_uuid) }
+
+      it "should return all of the subscriptions" do
+        result = subject
+        subscriptions.each_with_index do |subscription, i|
+          expect(result[i].uuid).to eq(subscription[:uuid])
+        end
+      end
+    end
+
     describe "list_plans" do
 
       let(:plans) {[
